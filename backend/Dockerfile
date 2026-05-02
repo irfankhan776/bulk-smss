@@ -1,17 +1,27 @@
-FROM node:20-alpine
+FROM node:20-slim
+
+# Install system dependencies
+RUN apt-get update -y && \
+    apt-get install -y openssl libssl-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund
+# Copy dependency files
+COPY package*.json ./
 
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the code
 COPY . .
 
-ENV NODE_ENV=production
+# Generate Prisma client
+# Note: We point to the schema location
+RUN npx prisma generate --schema=src/prisma/schema.prisma
 
-RUN npx prisma generate --schema src/prisma/schema.prisma
+# Expose the port
+EXPOSE 8080
 
-EXPOSE 4000
-
-CMD ["node", "server.js"]
-
+# Start the application
+CMD ["node", "src/server.js"]
