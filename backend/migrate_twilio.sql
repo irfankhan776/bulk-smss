@@ -1,0 +1,11 @@
+ALTER TABLE "Message" RENAME COLUMN "telnyxMessageId" TO "providerMessageId";
+ALTER TABLE "WebhookEvent" RENAME COLUMN "telnyxEventId" TO "providerEventId";
+ALTER TABLE "TelnyxNumber" RENAME TO "ProviderNumber";
+DROP INDEX IF EXISTS "Message_telnyxMessageId_key";
+DROP INDEX IF EXISTS "Message_telnyxMessageId_idx";
+CREATE UNIQUE INDEX "Message_providerMessageId_key" ON "Message"("providerMessageId");
+CREATE INDEX "Message_providerMessageId_idx" ON "Message"("providerMessageId");
+DROP INDEX IF EXISTS "WebhookEvent_telnyxEventId_key";
+CREATE UNIQUE INDEX "WebhookEvent_providerEventId_key" ON "WebhookEvent"("providerEventId");
+DROP INDEX IF EXISTS "TelnyxNumber_phoneNumber_key";
+CREATE UNIQUE INDEX "ProviderNumber_phoneNumber_key" ON "ProviderNumber"("phoneNumber");

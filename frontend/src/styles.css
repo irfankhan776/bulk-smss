@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent-400: #39FF88;
+  --color-accent-500: #1DE86A;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+}
+
+::selection {
+  background: rgba(57, 255, 136, 0.22);
+}
+

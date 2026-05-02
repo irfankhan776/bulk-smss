@@ -1,0 +1,33 @@
+{
+  "name": "sms-platform-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "worker": "node src/jobs/bulkSms.worker.js",
+    "prisma:generate": "prisma generate --schema src/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema src/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "5",
+    "axios": "latest",
+    "bull": "latest",
+    "cors": "latest",
+    "csv-parse": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "helmet": "latest",
+    "morgan": "latest",
+    "pino": "latest",
+    "pino-pretty": "latest",
+    "socket.io": "latest",
+    "twilio": "^5.13.1"
+  },
+  "devDependencies": {
+    "nodemon": "latest",
+    "prisma": "5"
+  }
+}
