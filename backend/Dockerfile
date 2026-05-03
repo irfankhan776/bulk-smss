@@ -23,5 +23,5 @@ RUN npx prisma generate --schema=src/prisma/schema.prisma
 # Expose the port
 EXPOSE 8080
 
-# Sync database and start the application
-CMD npm run deploy:push && npm start
+# Start the application (prestart will handle DB sync)
+CMD ["npm", "start"]

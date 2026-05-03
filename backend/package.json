@@ -6,6 +6,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
+    "prestart": "prisma db push --schema src/prisma/schema.prisma --accept-data-loss",
     "start": "node server.js",
     "worker": "node src/jobs/bulkSms.worker.js",
     "prisma:generate": "prisma generate --schema src/prisma/schema.prisma",
