@@ -197,9 +197,20 @@ export default function Contacts() {
             {importing ? "Importing…" : "Import"}
           </button>
           {importResult && (
-            <div className="text-sm text-slate-300">
-              Created <span className="text-accent-400">{importResult.created}</span>, Updated <span className="text-accent-400">{importResult.updated}</span>, Errors{" "}
-              <span className={clsx(importResult.errorsCount ? "text-red-300" : "text-slate-400")}>{importResult.errorsCount}</span>
+            <div className="space-y-2">
+              <div className="text-sm text-slate-300">
+                Created <span className="text-accent-400">{importResult.created}</span>, Updated <span className="text-accent-400">{importResult.updated}</span>, Errors{" "}
+                <span className={clsx(importResult.errorsCount ? "text-red-300" : "text-slate-400")}>{importResult.errorsCount}</span>
+              </div>
+              {importResult.errors?.length > 0 && (
+                <div className="rounded-md bg-red-500/10 ring-1 ring-red-500/20 p-2 max-h-32 overflow-y-auto">
+                  {importResult.errors.map((err: any, idx: number) => (
+                    <div key={idx} className="text-[10px] text-red-300 font-mono">
+                      Line {idx + 1}: {err.phone} - {err.error}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
