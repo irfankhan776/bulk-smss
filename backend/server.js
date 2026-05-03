@@ -18,6 +18,7 @@ const PORT = parseInt(process.env.PORT || "4000", 10);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(
