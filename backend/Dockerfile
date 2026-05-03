@@ -23,5 +23,5 @@ RUN npx prisma generate --schema=src/prisma/schema.prisma
 # Expose the port
 EXPOSE 8080
 
-# Start the application
-CMD ["node", "src/server.js"]
+# Ensure DB is in sync and start
+CMD npx prisma db push --schema=src/prisma/schema.prisma && node server.js
