@@ -20,7 +20,7 @@ COPY . .
 # Note: We point to the schema location
 RUN npx prisma generate --schema=src/prisma/schema.prisma
 
-# Expose the port
+# Railway injects PORT at runtime — server.js reads process.env.PORT
 EXPOSE 8080
 
 # Start the application (prestart will handle DB sync)

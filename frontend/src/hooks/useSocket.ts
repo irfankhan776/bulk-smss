@@ -3,7 +3,9 @@ import { io, Socket } from "socket.io-client";
 import { useAppStore, Message } from "../store/useAppStore";
 import { api } from "../api/client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:4000";
+// In dev: connect to same origin so Vite's ws proxy forwards to backend (port 4000)
+// In prod: VITE_SOCKET_URL is injected at Docker build time (e.g. https://backend.up.railway.app)
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 export function useSocket() {
   const setSocketConnected = useAppStore((s) => s.setSocketConnected);
@@ -20,7 +22,7 @@ export function useSocket() {
 
   useEffect(() => {
     const socket = io(SOCKET_URL, {
-      transports: ["websocket"]
+      transports: ["polling", "websocket"],
     });
     socketRef.current = socket;
 
