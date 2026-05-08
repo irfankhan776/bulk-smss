@@ -4,6 +4,12 @@ const { bulkSmsQueue } = require("./bulkSms.queue");
 const { prisma } = require("../prisma/client");
 const { sendSingleSMS, getBalance } = require("../services/telnyx.service");
 
+if (!bulkSmsQueue) {
+  console.warn("[bulk-sms.worker] Queue not available (Redis not configured). Worker is DISABLED.");
+  module.exports = {};
+  return;
+}
+
 const CONCURRENCY = 5;
 const INTER_JOB_DELAY_MS = 200;
 
@@ -44,97 +50,103 @@ async function emitCampaignProgress(io, campaignId) {
   });
 }
 
-bulkSmsQueue.process(CONCURRENCY, async (job) => {
-  const io = await getIoIfAvailable();
-  const { campaignId, contactId, to, from, body, messageId } = job.data || {};
+if (bulkSmsQueue) {
+  bulkSmsQueue.process(CONCURRENCY, async (job) => {
+    const io = await getIoIfAvailable();
+    const { campaignId, contactId, to, from, body, messageId } = job.data || {};
 
-  if (!campaignId || !contactId || !to || !from || !body || !messageId) {
-    throw new Error("Invalid job payload (campaignId, contactId, to, from, body, messageId required)");
-  }
-
-  // Delay between jobs (rate limit safety)
-  await sleep(INTER_JOB_DELAY_MS);
-
-  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
-  if (!contact) {
-    throw new Error(`Contact not found: ${contactId}`);
-  }
-
-  const personalizedBody = renderTemplate(body, contact);
-
-  const message = await prisma.message.findUnique({ where: { id: messageId } });
-  if (!message) throw new Error("Missing queued message record for campaign send");
-
-  const { providerMessageId } = await sendSingleSMS({ to, from, text: personalizedBody });
-
-  await prisma.$transaction(async (tx) => {
-    await tx.message.update({
-      where: { id: messageId },
-      data: { providerMessageId, status: "sent", body: personalizedBody },
-    });
-
-    await tx.campaignContact.update({
-      where: { campaignId_contactId: { campaignId, contactId } },
-      data: { status: "sent", sentAt: new Date() },
-    });
-
-    await tx.campaign.update({
-      where: { id: campaignId },
-      data: { sentCount: { increment: 1 } },
-    });
-  });
-
-  await emitCampaignProgress(io, campaignId);
-
-  if (io) {
-    try {
-      const bal = await getBalance();
-      io.emit("balance:update", bal);
-    } catch (err) {
-      console.error("[worker] balance update failed", { err: err?.message, code: err?.code });
+    if (!campaignId || !contactId || !to || !from || !body || !messageId) {
+      throw new Error("Invalid job payload (campaignId, contactId, to, from, body, messageId required)");
     }
-  }
 
-  return { ok: true };
-});
+    // Delay between jobs (rate limit safety)
+    await sleep(INTER_JOB_DELAY_MS);
 
-bulkSmsQueue.on("failed", async (job, err) => {
-  const attemptsMade = job?.attemptsMade ?? 0;
-  const maxAttempts = job?.opts?.attempts ?? 3;
-  const io = await getIoIfAvailable();
+    const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+    if (!contact) {
+      throw new Error(`Contact not found: ${contactId}`);
+    }
 
-  console.error("[bulk-sms] job failed", { id: job?.id, attemptsMade, maxAttempts, err: err?.message });
+    const personalizedBody = renderTemplate(body, contact);
 
-  if (!job?.data?.campaignId || !job?.data?.contactId || !job?.data?.messageId) return;
-  const { campaignId, contactId, messageId } = job.data;
+    const message = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!message) throw new Error("Missing queued message record for campaign send");
 
-  // Only mark failed after final retry
-  if (attemptsMade < maxAttempts) return;
+    const { providerMessageId } = await sendSingleSMS({ to, from, text: personalizedBody });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.message.update({ where: { id: messageId }, data: { status: "failed" } });
+    await prisma.$transaction(async (tx) => {
+      await tx.message.update({
+        where: { id: messageId },
+        data: { providerMessageId, status: "sent", body: personalizedBody },
+      });
 
-    await tx.campaignContact.update({
-      where: { campaignId_contactId: { campaignId, contactId } },
-      data: { status: "failed" },
+      await tx.campaignContact.update({
+        where: { campaignId_contactId: { campaignId, contactId } },
+        data: { status: "sent", sentAt: new Date() },
+      });
+
+      await tx.campaign.update({
+        where: { id: campaignId },
+        data: { sentCount: { increment: 1 } },
+      });
     });
 
-    await tx.campaign.update({
-      where: { id: campaignId },
-      data: { failedCount: { increment: 1 } },
-    });
+    await emitCampaignProgress(io, campaignId);
+
+    if (io) {
+      try {
+        const bal = await getBalance();
+        io.emit("balance:update", bal);
+      } catch (err) {
+        console.error("[worker] balance update failed", { err: err?.message, code: err?.code });
+      }
+    }
+
+    return { ok: true };
   });
 
-  await emitCampaignProgress(io, campaignId);
-});
+  bulkSmsQueue.on("failed", async (job, err) => {
+    const attemptsMade = job?.attemptsMade ?? 0;
+    const maxAttempts = job?.opts?.attempts ?? 3;
+    const io = await getIoIfAvailable();
+
+    console.error("[bulk-sms] job failed", { id: job?.id, attemptsMade, maxAttempts, err: err?.message });
+
+    if (!job?.data?.campaignId || !job?.data?.contactId || !job?.data?.messageId) return;
+    const { campaignId, contactId, messageId } = job.data;
+
+    // Only mark failed after final retry
+    if (attemptsMade < maxAttempts) return;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.message.update({ where: { id: messageId }, data: { status: "failed" } });
+
+      await tx.campaignContact.update({
+        where: { campaignId_contactId: { campaignId, contactId } },
+        data: { status: "failed" },
+      });
+
+      await tx.campaign.update({
+        where: { id: campaignId },
+        data: { failedCount: { increment: 1 } },
+      });
+    });
+
+    await emitCampaignProgress(io, campaignId);
+  });
+}
 
 async function shutdown() {
-  await bulkSmsQueue.close();
+  if (bulkSmsQueue) {
+    await bulkSmsQueue.close();
+  }
   await prisma.$disconnect();
 }
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-console.log("[bulk-sms.worker] running", { concurrency: CONCURRENCY, delayMs: INTER_JOB_DELAY_MS });
+if (bulkSmsQueue) {
+  console.log("[bulk-sms.worker] running", { concurrency: CONCURRENCY, delayMs: INTER_JOB_DELAY_MS });
+}
 
