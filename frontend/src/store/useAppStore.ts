@@ -62,6 +62,7 @@ type State = {
   socketConnected: boolean;
   balance: Balance | null;
   activity: ActivityItem[];
+  defaultFromNumber: string | null;
 
   conversations: ConversationRow[];
   unreadPhones: Record<string, boolean>;
@@ -76,6 +77,7 @@ type State = {
   setSocketConnected: (v: boolean) => void;
   setBalance: (b: Balance) => void;
   pushActivity: (item: ActivityItem) => void;
+  setDefaultFromNumber: (n: string | null) => void;
 
   setConversations: (rows: ConversationRow[]) => void;
   setActivePhone: (phone: string | null) => void;
@@ -94,6 +96,7 @@ export const useAppStore = create<State>((set, get) => ({
   socketConnected: false,
   balance: null,
   activity: [],
+  defaultFromNumber: null,
 
   conversations: [],
   unreadPhones: {},
@@ -111,6 +114,7 @@ export const useAppStore = create<State>((set, get) => ({
     set((s) => ({
       activity: [item, ...s.activity].slice(0, 50)
     })),
+  setDefaultFromNumber: (n) => set({ defaultFromNumber: n }),
 
   setConversations: (rows) => set({ conversations: rows }),
   setActivePhone: (phone) => set({ activePhone: phone }),
