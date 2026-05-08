@@ -10,7 +10,7 @@ function safeString(v) {
   return String(v);
 }
 
-function extractTelnyxEventId(evt) {
+function extractProviderEventId(evt) {
   return evt?.data?.id || evt?.id || evt?.data?.payload?.id;
 }
 
@@ -28,15 +28,15 @@ function parseMessageFields(payload) {
   const from = payload?.from?.phone_number || payload?.from?.phoneNumber || payload?.from;
   const to = Array.isArray(payload?.to) ? payload?.to?.[0]?.phone_number : payload?.to?.phone_number || payload?.to;
   const text = payload?.text || payload?.body || payload?.message || "";
-  const telnyxMessageId = payload?.id || payload?.message_id || payload?.messageId;
+  const providerMessageId = payload?.id || payload?.message_id || payload?.messageId;
   const deliveryStatus = payload?.to?.[0]?.status || payload?.to?.[0]?.delivery_status || payload?.delivery_status;
   const error = payload?.to?.[0]?.errors?.[0]?.detail || payload?.errors?.[0]?.detail || payload?.errors;
-  return { from: safeString(from).trim(), to: safeString(to).trim(), text: safeString(text), telnyxMessageId, deliveryStatus, error };
+  return { from: safeString(from).trim(), to: safeString(to).trim(), text: safeString(text), providerMessageId, deliveryStatus, error };
 }
 
-async function markProcessed(telnyxEventId) {
+async function markProcessed(providerEventId) {
   await prisma.webhookEvent.update({
-    where: { telnyxEventId },
+    where: { providerEventId },
     data: { processed: true },
   });
 }
@@ -54,23 +54,23 @@ router.post("/telnyx", async (req, res) => {
     return res.status(400).json({ error: "invalid signature" });
   }
 
-  const telnyxEventId = extractTelnyxEventId(evt);
+  const providerEventId = extractProviderEventId(evt);
   const eventType = extractEventType(evt);
   const payload = extractPayload(evt);
 
-  if (!telnyxEventId || !eventType) {
-    console.error("[webhook] missing event metadata", { telnyxEventId, eventType });
+  if (!providerEventId || !eventType) {
+    console.error("[webhook] missing event metadata", { providerEventId, eventType });
     return res.status(400).json({ error: "bad event" });
   }
 
   // Idempotency guard
-  const existing = await prisma.webhookEvent.findUnique({ where: { telnyxEventId }, select: { id: true } });
+  const existing = await prisma.webhookEvent.findUnique({ where: { providerEventId }, select: { id: true } });
   if (existing) return res.status(200).json({ ok: true, deduped: true });
 
   // Store raw event immediately
   await prisma.webhookEvent.create({
     data: {
-      telnyxEventId,
+      providerEventId,
       eventType,
       payload: evt,
       processed: false,
@@ -93,7 +93,7 @@ router.post("/telnyx", async (req, res) => {
       if (eventType === "message.received") {
         // INBOUND SMS IS SACRED: validate → store → emit (in transaction)
         await prisma.$transaction(async (tx) => {
-          const { from, to, text, telnyxMessageId: inboundTelnyxMessageId } = parseMessageFields(payload);
+          const { from, to, text, providerMessageId: inboundProviderMessageId } = parseMessageFields(payload);
 
           const contact = await tx.contact.upsert({
             where: { phone: from },
@@ -106,7 +106,7 @@ router.post("/telnyx", async (req, res) => {
               direction: "INBOUND",
               status: "received",
               body: text,
-              telnyxMessageId: inboundTelnyxMessageId || null,
+              providerMessageId: inboundProviderMessageId || null,
               fromNumber: from,
               toNumber: to,
               contactId: contact.id,
@@ -115,7 +115,7 @@ router.post("/telnyx", async (req, res) => {
           });
 
           await tx.webhookEvent.update({
-            where: { telnyxEventId },
+            where: { providerEventId },
             data: { processed: true },
           });
 
@@ -129,14 +129,14 @@ router.post("/telnyx", async (req, res) => {
       }
 
       if (eventType === "message.sent") {
-        const { telnyxMessageId } = parseMessageFields(payload);
-        if (!telnyxMessageId) {
-          await markProcessed(telnyxEventId);
+        const { providerMessageId } = parseMessageFields(payload);
+        if (!providerMessageId) {
+          await markProcessed(providerEventId);
           return;
         }
-        const msg = await prisma.message.findUnique({ where: { telnyxMessageId }, select: { id: true, contactId: true, contact: { select: { phone: true } } } });
+        const msg = await prisma.message.findUnique({ where: { providerMessageId }, select: { id: true, contactId: true, contact: { select: { phone: true } } } });
         if (!msg) {
-          await markProcessed(telnyxEventId);
+          await markProcessed(providerEventId);
           return;
         }
         const updated = await prisma.message.update({ where: { id: msg.id }, data: { status: "sent" } });
@@ -144,23 +144,23 @@ router.post("/telnyx", async (req, res) => {
           io.emit("message:status", { messageId: updated.id, status: updated.status });
           if (msg?.contact?.phone) io.to(`conversation:${msg.contact.phone}`).emit("message:status", { messageId: updated.id, status: updated.status });
         }
-        await markProcessed(telnyxEventId);
+        await markProcessed(providerEventId);
         return;
       }
 
       if (eventType === "message.finalized") {
-        const { telnyxMessageId, deliveryStatus, error } = parseMessageFields(payload);
-        if (!telnyxMessageId) {
-          await markProcessed(telnyxEventId);
+        const { providerMessageId, deliveryStatus, error } = parseMessageFields(payload);
+        if (!providerMessageId) {
+          await markProcessed(providerEventId);
           return;
         }
 
         const msg = await prisma.message.findUnique({
-          where: { telnyxMessageId },
+          where: { providerMessageId },
           include: { contact: true },
         });
         if (!msg) {
-          await markProcessed(telnyxEventId);
+          await markProcessed(providerEventId);
           return;
         }
 
@@ -202,13 +202,13 @@ router.post("/telnyx", async (req, res) => {
           io.to(`conversation:${msg.contact.phone}`).emit("message:status", payloadOut);
         }
 
-        await markProcessed(telnyxEventId);
+        await markProcessed(providerEventId);
         return;
       }
 
-      await markProcessed(telnyxEventId);
+      await markProcessed(providerEventId);
     } catch (err) {
-      console.error("[webhook] handler error", { telnyxEventId, eventType, err: err?.message });
+      console.error("[webhook] handler error", { providerEventId, eventType, err: err?.message });
       // Keep webhook event record for forensic purposes; do not throw.
     }
   };

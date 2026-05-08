@@ -23,9 +23,10 @@ services:
       FRONTEND_URL: http://localhost:5173
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sms_platform?schema=public
       REDIS_URL: redis://redis:6379
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      TELNYX_API_KEY: ${TELNYX_API_KEY}
+      TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY}
+      TELNYX_WEBHOOK_SECRET: ${TELNYX_WEBHOOK_SECRET}
+      TELNYX_PHONE_NUMBER: ${TELNYX_PHONE_NUMBER}
       DEFAULT_FROM_NUMBER: ${DEFAULT_FROM_NUMBER}
     depends_on:
       - postgres
@@ -40,9 +41,10 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sms_platform?schema=public
       REDIS_URL: redis://redis:6379
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      TELNYX_API_KEY: ${TELNYX_API_KEY}
+      TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY}
+      TELNYX_WEBHOOK_SECRET: ${TELNYX_WEBHOOK_SECRET}
+      TELNYX_PHONE_NUMBER: ${TELNYX_PHONE_NUMBER}
       DEFAULT_FROM_NUMBER: ${DEFAULT_FROM_NUMBER}
     depends_on:
       - postgres

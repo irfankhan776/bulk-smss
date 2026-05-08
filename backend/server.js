@@ -7,7 +7,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 
 const { apiRouter } = require("./src/routes");
-const { twilioWebhookRouter } = require("./src/webhooks/twilio.webhook");
+const { telnyxWebhookRouter } = require("./src/webhooks/telnyx.webhook");
 const { initSocket } = require("./src/socket");
 const { prisma } = require("./src/prisma/client");
 
@@ -33,7 +33,7 @@ app.use(morgan("dev"));
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 // Webhook must receive raw body for signature validation
-app.use("/api/webhooks", twilioWebhookRouter);
+app.use("/api/webhooks", express.raw({ type: "application/json" }), telnyxWebhookRouter);
 
 // Normal JSON routes
 app.use(express.json({ limit: "2mb" }));

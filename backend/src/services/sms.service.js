@@ -1,5 +1,5 @@
 const { prisma } = require("../prisma/client");
-const { sendSingleSMS } = require("./twilio.service");
+const { sendSingleSMS } = require("./telnyx.service");
 
 function normalizePhone(p) {
   if (!p) return null;

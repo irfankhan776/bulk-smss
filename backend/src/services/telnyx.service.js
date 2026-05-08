@@ -48,12 +48,12 @@ async function sendSingleSMS({ to, from, text }) {
       }
     );
 
-    const telnyxMessageId = res?.data?.id;
+    const providerMessageId = res?.data?.id;
     const status = res?.data?.to?.[0]?.status || res?.data?.to?.[0]?.delivery_status || "sent";
-    if (!telnyxMessageId) {
+    if (!providerMessageId) {
       throw new TelnyxError({ code: "TELNYX_BAD_RESPONSE", message: "Missing Telnyx message id" });
     }
-    return { telnyxMessageId, status };
+    return { providerMessageId, status };
   } catch (err) {
     throw toTelnyxError(err);
   }
@@ -98,17 +98,16 @@ async function getBalance() {
 
 function validateWebhookSignature(rawBody, signatureHeader, timestampHeader) {
   const publicKey = process.env.TELNYX_PUBLIC_KEY;
-  const webhookSecret = process.env.TELNYX_WEBHOOK_SECRET;
-  if (!publicKey || !webhookSecret) {
+  if (!publicKey) {
     throw new TelnyxError({
       code: "WEBHOOK_CONFIG_MISSING",
-      message: "TELNYX_PUBLIC_KEY and TELNYX_WEBHOOK_SECRET must be set",
+      message: "TELNYX_PUBLIC_KEY must be set",
     });
   }
 
   try {
     // telnyx.webhooks.constructEvent throws if invalid
-    return telnyx.webhooks.constructEvent(rawBody, signatureHeader, timestampHeader, webhookSecret, publicKey);
+    return telnyx.webhooks.constructEvent(rawBody, signatureHeader, timestampHeader, publicKey);
   } catch (err) {
     throw new TelnyxError({ code: "WEBHOOK_SIGNATURE_INVALID", message: "Invalid webhook signature", details: err?.message });
   }

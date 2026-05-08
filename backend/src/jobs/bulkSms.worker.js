@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const { bulkSmsQueue } = require("./bulkSms.queue");
 const { prisma } = require("../prisma/client");
-const { sendSingleSMS, getBalance } = require("../services/twilio.service");
+const { sendSingleSMS, getBalance } = require("../services/telnyx.service");
 
 const CONCURRENCY = 5;
 const INTER_JOB_DELAY_MS = 200;
