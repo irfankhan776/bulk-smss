@@ -20,6 +20,7 @@ export default function Contacts() {
   const [mapping, setMapping] = useState<{ phone: string; name?: string; tags?: string }>({ phone: "" });
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -56,11 +57,15 @@ export default function Contacts() {
   async function importCsv() {
     setImporting(true);
     setImportResult(null);
+    setImportError(null);
     try {
       const { data } = await api.post("/contacts/import", { csvText, mapping });
       setImportResult(data);
       const refreshed = await api.get("/contacts", { params: { page: 1, pageSize: 200 } });
       setContacts(refreshed.data?.items || []);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Import failed — check your CSV and column mapping";
+      setImportError(msg);
     } finally {
       setImporting(false);
     }
@@ -196,11 +201,16 @@ export default function Contacts() {
           >
             {importing ? "Importing…" : "Import"}
           </button>
+          {importError && (
+            <div className="rounded-md bg-red-500/10 ring-1 ring-red-500/20 px-3 py-2 text-sm text-red-300">
+              {importError}
+            </div>
+          )}
           {importResult && (
             <div className="space-y-2">
-              <div className="text-sm text-slate-300">
-                Created <span className="text-accent-400">{importResult.created}</span>, Updated <span className="text-accent-400">{importResult.updated}</span>, Errors{" "}
-                <span className={clsx(importResult.errorsCount ? "text-red-300" : "text-slate-400")}>{importResult.errorsCount}</span>
+              <div className="rounded-md bg-green-500/10 ring-1 ring-green-500/20 px-3 py-2 text-sm text-green-300">
+                Imported! Created <span className="font-semibold">{importResult.created}</span>, Updated <span className="font-semibold">{importResult.updated}</span>
+                {importResult.errorsCount > 0 && <>, Errors <span className="text-red-300 font-semibold">{importResult.errorsCount}</span></>}
               </div>
               {importResult.errors?.length > 0 && (
                 <div className="rounded-md bg-red-500/10 ring-1 ring-red-500/20 p-2 max-h-32 overflow-y-auto">
