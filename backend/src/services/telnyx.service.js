@@ -32,11 +32,45 @@ async function sendSingleSMS({ to, from, text }) {
   try {
     const res = await withExponentialBackoff(
       async () => {
-        return await telnyx.messages.create({
-          to,
-          from,
-          text,
-        });
+        try {
+          return await telnyx.messages.create({
+            to,
+            from,
+            text,
+          });
+        } catch (err) {
+          // Check for "Invalid 'from' address" or "Alpha sender not configured" which typically
+          // happens when trying to send from a US/Canada long code to international destinations (like Nigeria)
+          const errCode = err?.response?.data?.errors?.[0]?.code;
+          if (errCode === "40305" || errCode === "40306" || err?.response?.status === 400 || err?.response?.status === 409) {
+            console.log(`[telnyx] 'from' address rejected for ${to}. Attempting alpha sender fallback...`);
+            try {
+              // Get the profile ID for the number
+              const nums = await telnyx.phoneNumbers.list({ filter: { phone_number: from } });
+              const profileId = nums?.data?.[0]?.messaging_profile_id;
+              
+              if (profileId) {
+                // Get the alpha sender from the profile
+                const profile = await telnyx.messagingProfiles.retrieve(profileId);
+                const alphaSender = profile?.data?.alpha_sender;
+                
+                if (alphaSender) {
+                  console.log(`[telnyx] Retrying with alpha sender: '${alphaSender}'`);
+                  return await telnyx.messages.create({
+                    to,
+                    from: alphaSender,
+                    messaging_profile_id: profileId,
+                    text,
+                  });
+                }
+              }
+            } catch (fallbackErr) {
+              console.error("[telnyx] Alpha sender fallback failed", fallbackErr?.message);
+              // Ignore fallback error and throw the original error
+            }
+          }
+          throw err;
+        }
       },
       {
         retries: 3,
