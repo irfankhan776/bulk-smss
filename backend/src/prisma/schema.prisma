@@ -60,6 +60,7 @@ model Message {
   toNumber        String
   contactId       String
   campaignId      String?
+  errorMessage    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 

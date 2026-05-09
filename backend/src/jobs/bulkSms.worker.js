@@ -122,7 +122,7 @@ if (bulkSmsQueue) {
     if (attemptsMade < maxAttempts) return;
 
     await prisma.$transaction(async (tx) => {
-      await tx.message.update({ where: { id: messageId }, data: { status: "failed" } });
+      await tx.message.update({ where: { id: messageId }, data: { status: "failed", errorMessage: err?.message || "Unknown error" } });
 
       await tx.campaignContact.update({
         where: { campaignId_contactId: { campaignId, contactId } },

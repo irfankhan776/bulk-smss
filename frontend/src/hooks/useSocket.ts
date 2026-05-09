@@ -65,10 +65,10 @@ export function useSocket() {
       if (useAppStore.getState().activePhone !== phone) markUnread(phone, true);
     });
 
-    socket.on("message:status", (p: { messageId: string; status: Message["status"] }) => {
+    socket.on("message:status", (p: { messageId: string; status: Message["status"]; error?: string }) => {
       const state = useAppStore.getState();
       for (const phone of Object.keys(state.messagesByPhone)) {
-        updateMessageStatus(phone, p.messageId, p.status);
+        updateMessageStatus(phone, p.messageId, p.status, p.error);
       }
       pushActivity({ type: "status", at: Date.now(), messageId: p.messageId, status: p.status });
     });

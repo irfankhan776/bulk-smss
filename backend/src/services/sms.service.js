@@ -55,7 +55,7 @@ async function sendOutboundMessage({ to, from, body, campaignId = null }) {
     console.error("[sms.service] send failed", { messageId: message.id, err: err?.message, code: err?.code });
     await prisma.message.update({
       where: { id: message.id },
-      data: { status: "failed" },
+      data: { status: "failed", errorMessage: err?.message || "Unknown error" },
     });
     throw err;
   }

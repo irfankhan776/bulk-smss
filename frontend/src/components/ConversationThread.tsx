@@ -83,6 +83,11 @@ export default function ConversationThread({
                     <span>{format(new Date(m.createdAt), "MMM d, h:mm a")}</span>
                     {!inbound && <StatusBadge status={m.status} />}
                   </div>
+                  {isFailed && m.errorMessage && (
+                    <div className="mt-1.5 pt-1.5 border-t border-red-500/20 text-xs text-red-400 font-medium">
+                      Failed: {m.errorMessage}
+                    </div>
+                  )}
                 </div>
               </div>
             );

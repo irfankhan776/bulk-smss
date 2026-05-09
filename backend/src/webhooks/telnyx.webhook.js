@@ -166,9 +166,14 @@ router.post("/telnyx", async (req, res) => {
 
         const nextStatus = deliveryStatus === "delivered" ? "delivered" : deliveryStatus === "failed" ? "failed" : msg.status;
 
+        const updateData = { status: nextStatus };
+        if (nextStatus === "failed" && error) {
+          updateData.errorMessage = String(error);
+        }
+
         const updated = await prisma.message.update({
           where: { id: msg.id },
-          data: { status: nextStatus },
+          data: updateData,
         });
 
         if (msg.campaignId) {

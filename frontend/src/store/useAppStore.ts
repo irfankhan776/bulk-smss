@@ -17,6 +17,7 @@ export type Message = {
   toNumber: string;
   contactId: string;
   campaignId?: string | null;
+  errorMessage?: string | null;
   createdAt: string;
   updatedAt: string;
   contact?: Contact;
@@ -89,7 +90,7 @@ type State = {
 
   upsertMessage: (phone: string, message: Message) => void;
   setThread: (phone: string, messages: Message[]) => void;
-  updateMessageStatus: (phone: string, messageId: string, status: Message["status"]) => void;
+  updateMessageStatus: (phone: string, messageId: string, status: Message["status"], error?: string) => void;
 };
 
 export const useAppStore = create<State>((set, get) => ({
@@ -141,11 +142,11 @@ export const useAppStore = create<State>((set, get) => ({
     set((s) => ({
       messagesByPhone: { ...s.messagesByPhone, [phone]: messages }
     })),
-  updateMessageStatus: (phone, messageId, status) => {
+  updateMessageStatus: (phone, messageId, status, error) => {
     const cur = get().messagesByPhone[phone] || [];
     const idx = cur.findIndex((m) => m.id === messageId);
     if (idx < 0) return;
-    const updated = { ...cur[idx], status };
+    const updated = { ...cur[idx], status, ...(error ? { errorMessage: error } : {}) };
     const next = [...cur.slice(0, idx), updated, ...cur.slice(idx + 1)];
     set((s) => ({ messagesByPhone: { ...s.messagesByPhone, [phone]: next } }));
   }
