@@ -3,7 +3,9 @@ const { sendSingleSMS } = require("./telnyx.service");
 
 function normalizePhone(p) {
   if (!p) return null;
-  let s = String(p).trim();
+  // Remove all characters except digits and plus sign
+  let s = String(p).replace(/[^\d+]/g, '');
+  
   // If the number consists only of digits (no +), prepend +
   if (/^\d+$/.test(s)) {
     s = '+' + s;
