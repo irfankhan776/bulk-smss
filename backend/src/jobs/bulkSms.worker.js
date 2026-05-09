@@ -3,6 +3,7 @@ require("dotenv").config();
 const { bulkSmsQueue } = require("./bulkSms.queue");
 const { prisma } = require("../prisma/client");
 const { sendSingleSMS, getBalance } = require("../services/telnyx.service");
+const { normalizePhone } = require("../services/sms.service");
 
 if (!bulkSmsQueue) {
   console.warn("[bulk-sms.worker] Queue not available (Redis not configured). Worker is DISABLED.");
@@ -72,7 +73,9 @@ if (bulkSmsQueue) {
     const message = await prisma.message.findUnique({ where: { id: messageId } });
     if (!message) throw new Error("Missing queued message record for campaign send");
 
-    const { providerMessageId } = await sendSingleSMS({ to, from, text: personalizedBody });
+    const normTo = normalizePhone(to);
+    const normFrom = normalizePhone(from);
+    const { providerMessageId } = await sendSingleSMS({ to: normTo, from: normFrom, text: personalizedBody });
 
     await prisma.$transaction(async (tx) => {
       await tx.message.update({

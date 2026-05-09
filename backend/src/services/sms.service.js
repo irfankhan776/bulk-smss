@@ -3,7 +3,12 @@ const { sendSingleSMS } = require("./telnyx.service");
 
 function normalizePhone(p) {
   if (!p) return null;
-  return String(p).trim();
+  let s = String(p).trim();
+  // If the number consists only of digits (no +), prepend +
+  if (/^\d+$/.test(s)) {
+    s = '+' + s;
+  }
+  return s;
 }
 
 async function sendOutboundMessage({ to, from, body, campaignId = null }) {
@@ -54,5 +59,5 @@ async function sendOutboundMessage({ to, from, body, campaignId = null }) {
   }
 }
 
-module.exports = { sendOutboundMessage };
+module.exports = { sendOutboundMessage, normalizePhone };
 
