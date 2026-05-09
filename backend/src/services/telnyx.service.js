@@ -1,7 +1,5 @@
-const telnyx = require("telnyx");
+const telnyx = require("telnyx")(process.env.TELNYX_API_KEY);
 const { withExponentialBackoff } = require("./backoff");
-
-telnyx.apiKey = process.env.TELNYX_API_KEY;
 
 class TelnyxError extends Error {
   constructor({ code, message, details }) {
