@@ -1,0 +1,173 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  queued
+  sent
+  delivered
+  failed
+  received
+}
+
+enum CampaignStatus {
+  draft
+  running
+  paused
+  completed
+  failed
+}
+
+enum CampaignSource {
+  google_maps
+  csv_upload
+}
+
+enum CampaignContactStatus {
+  pending
+  sent
+  delivered
+  failed
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages          Message[]
+  campaignContacts  CampaignContact[]
+
+  @@index([phone])
+}
+
+model Message {
+  id              String           @id @default(cuid())
+  direction       MessageDirection
+  body            String
+  status          MessageStatus
+  providerMessageId String?          @unique
+  fromNumber      String
+  toNumber        String
+  contactId       String
+  campaignId      String?
+  errorMessage    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([contactId, createdAt(sort: Desc)])
+  @@index([campaignId])
+  @@index([providerMessageId])
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  name           String
+  body           String
+  status         CampaignStatus @default(draft)
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  totalCount     Int            @default(0)
+  sentCount      Int            @default(0)
+  deliveredCount Int            @default(0)
+  failedCount    Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // New wizard fields
+  source        CampaignSource @default(google_maps)
+  niche         String         @default("barber")
+  template      String         @default("barber")
+  outreachBody  String
+  delaySeconds  Int            @default(7)
+  maxLeads      Int            @default(50)
+  isLive        Boolean        @default(false)
+  csvRaw        String?
+  googleCity    String?
+  googleApiKey  String?
+
+  campaignContacts CampaignContact[]
+  campaignLeads    CampaignLead[]
+  messages         Message[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CampaignLead {
+  id           String   @id @default(cuid())
+  campaignId   String
+  businessName String
+  city         String
+  phone        String
+  website      String?
+  siteUrl      String?
+  status       String   @default("pending") // pending | processing | site_deployed | sms_sent | failed
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@index([campaignId])
+}
+
+model CampaignContact {
+  id          String                @id @default(cuid())
+  campaignId  String
+  contactId   String
+  status      CampaignContactStatus @default(pending)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+}
+
+model ProviderNumber {
+  id           String   @id @default(cuid())
+  phoneNumber  String   @unique
+  friendlyName String?
+  isActive     Boolean  @default(true)
+  monthlyFee   Decimal?
+  balance      Decimal?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  providerEventId String   @unique
+  eventType     String
+  payload       Json
+  processed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([processed])
+  @@index([createdAt])
+}
+

@@ -1,0 +1,37 @@
+{
+  "name": "sms-platform-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "prestart": "prisma migrate deploy --schema src/prisma/schema.prisma",
+    "start": "node server.js",
+    "worker": "node src/jobs/campaign.worker.js",
+    "prisma:generate": "prisma generate --schema src/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema src/prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema src/prisma/schema.prisma --accept-data-loss",
+    "deploy:push": "prisma db push --schema src/prisma/schema.prisma --accept-data-loss"
+  },
+  "dependencies": {
+    "@prisma/client": "5",
+    "axios": "latest",
+    "bull": "latest",
+    "cors": "latest",
+    "csv-parse": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "helmet": "latest",
+    "morgan": "latest",
+    "pino": "latest",
+    "pino-pretty": "latest",
+    "socket.io": "latest",
+    "telnyx": "^1.24.0"
+  },
+  "devDependencies": {
+    "nodemon": "latest",
+    "prisma": "5",
+    "wrangler": "latest"
+  }
+}

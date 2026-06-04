@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sms_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: 4000
+      FRONTEND_URL: http://localhost:5173
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sms_platform?schema=public
+      REDIS_URL: redis://redis:6379
+      TELNYX_API_KEY: ${TELNYX_API_KEY:-}
+      TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY:-}
+      TELNYX_WEBHOOK_SECRET: ${TELNYX_WEBHOOK_SECRET:-}
+      TELNYX_PHONE_NUMBER: ${TELNYX_PHONE_NUMBER:-}
+      DEFAULT_FROM_NUMBER: ${DEFAULT_FROM_NUMBER:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_PROJECT_NAME: ${CLOUDFLARE_PROJECT_NAME:-sms-bulk-pages}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "4000:4000"
+
+  # Campaign worker — separate process for sequential lead processing
+  worker:
+    build:
+      context: ./worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sms_platform?schema=public
+      REDIS_URL: redis://redis:6379
+      TELNYX_API_KEY: ${TELNYX_API_KEY:-}
+      TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY:-}
+      TELNYX_WEBHOOK_SECRET: ${TELNYX_WEBHOOK_SECRET:-}
+      TELNYX_PHONE_NUMBER: ${TELNYX_PHONE_NUMBER:-}
+      DEFAULT_FROM_NUMBER: ${DEFAULT_FROM_NUMBER:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_PROJECT_NAME: ${CLOUDFLARE_PROJECT_NAME:-sms-bulk-pages}
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://localhost:4000/api
+      VITE_SOCKET_URL: http://localhost:4000
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
