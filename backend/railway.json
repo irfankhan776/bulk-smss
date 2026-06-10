@@ -1,14 +1,13 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "node": "20"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "backend.dockerfile"
   },
   "deploy": {
     "numReplicas": 1,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10,
-    "startCommand": "npm install --include=dev && node server.js"
+    "restartPolicyMaxRetries": 10
   },
   "envs": {
     "TELNYX_API_KEY": { "required": true },
@@ -19,6 +18,7 @@
     "REDIS_URL": { "required": true },
     "CLOUDFLARE_ACCOUNT_ID": { "required": true },
     "CLOUDFLARE_API_TOKEN": { "required": true },
-    "CLOUDFLARE_PROJECT_NAME": { "required": true }
+    "CLOUDFLARE_PROJECT_NAME": { "required": true },
+    "FRONTEND_URL": { "required": false }
   }
 }
