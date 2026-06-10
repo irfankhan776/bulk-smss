@@ -74,6 +74,12 @@ export type CampaignLead = {
   updatedAt: string;
 };
 
+export type ApiStatusItem = {
+  status: "idle" | "checking" | "ok" | "error";
+  message?: string;
+  balance?: string;
+};
+
 type Balance = { balance: string | number | null; currency: string | null };
 
 type ActivityItem =
@@ -97,6 +103,9 @@ type State = {
 
   messagesByPhone: Record<string, Message[]>;
 
+  // API health status for each service
+  apiStatus: Record<string, ApiStatusItem>;
+
   setSocketConnected: (v: boolean) => void;
   setBalance: (b: Balance) => void;
   pushActivity: (item: ActivityItem) => void;
@@ -113,6 +122,8 @@ type State = {
   upsertMessage: (phone: string, message: Message) => void;
   setThread: (phone: string, messages: Message[]) => void;
   updateMessageStatus: (phone: string, messageId: string, status: Message["status"], error?: string) => void;
+
+  setApiStatus: (service: string, item: ApiStatusItem) => void;
 };
 
 export const useAppStore = create<State>((set, get) => ({
@@ -171,6 +182,11 @@ export const useAppStore = create<State>((set, get) => ({
     const updated = { ...cur[idx], status, ...(error ? { errorMessage: error } : {}) };
     const next = [...cur.slice(0, idx), updated, ...cur.slice(idx + 1)];
     set((s) => ({ messagesByPhone: { ...s.messagesByPhone, [phone]: next } }));
-  }
-}));
+  },
+
+  setApiStatus: (service, item) =>
+    set((s) => ({
+      apiStatus: { ...s.apiStatus, [service]: item }
+    })),
+})));
 

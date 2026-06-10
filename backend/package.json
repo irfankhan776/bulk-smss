@@ -27,11 +27,11 @@
     "pino": "latest",
     "pino-pretty": "latest",
     "socket.io": "latest",
-    "telnyx": "^1.24.0"
+    "telnyx": "^1.24.0",
+    "wrangler": "latest"
   },
   "devDependencies": {
     "nodemon": "latest",
-    "prisma": "5",
-    "wrangler": "latest"
+    "prisma": "5"
   }
 }

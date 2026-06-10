@@ -1,8 +1,23 @@
 const { normalizePhone } = require("./googleMaps.service");
 
 /**
+ * Normalizes a header string to a canonical key.
+ * Accepts: business_name, businessName, name, business, Business Name, etc.
+ */
+function normalizeHeader(header) {
+  const h = header.toLowerCase().replace(/['"_\s\-]+/g, "");
+  if (h === "businessname" || h === "business" || h.includes("businessname") || h === "name") return "businessName";
+  if (h === "phonenumber" || h === "phonenum") return "phone";
+  if (h === "phone") return "phone";
+  if (h === "city" || h === "location") return "city";
+  return h;
+}
+
+/**
  * Validates raw CSV content for campaign leads.
  * Returns all errors at once so the user sees everything wrong at once.
+ * Accepts flexible headers: phone/Phone/phone_number/Phone Number, etc.
+ * Normalizes to: businessName, city, phone.
  *
  * @param {string} rawCSV - Raw CSV string
  * @returns {{ valid: boolean, errors: Array<string>, rows: Array<{businessName,city,phone}>, headers: string[] }}
@@ -20,23 +35,18 @@ function validateCSV(rawCSV) {
     return { valid: false, errors: ["CSV must have a header row and at least one data row."], rows: [], headers: [] };
   }
 
-  const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/['"_\s\-]+/g, ""));
+  const rawHeaders = parseCSVLine(lines[0]);
+  const headers = rawHeaders.map((h) => normalizeHeader(h));
 
-  // Find column indices
-  const businessNameIdx = headers.findIndex(
-    (h) => h === "businessname" || h === "business" || h.includes("businessname")
-  );
-  const cityIdx = headers.findIndex(
-    (h) => h === "city" || h === "location" || h.includes("city")
-  );
-  const phoneIdx = headers.findIndex(
-    (h) => h === "phone" || h === "phonenumber" || h.includes("phone")
-  );
+  // Find column indices by canonical name
+  const businessNameIdx = headers.indexOf("businessName");
+  const cityIdx = headers.indexOf("city");
+  const phoneIdx = headers.indexOf("phone");
 
   const missingColumns = [];
-  if (businessNameIdx === -1) missingColumns.push("business_name (or businessName, business)");
+  if (businessNameIdx === -1) missingColumns.push("business_name (or businessName, name, business)");
   if (cityIdx === -1) missingColumns.push("city");
-  if (phoneIdx === -1) missingColumns.push("phone");
+  if (phoneIdx === -1) missingColumns.push("phone (or phone_number, Phone, Phone Number)");
 
   if (missingColumns.length > 0) {
     return {

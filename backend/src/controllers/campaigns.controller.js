@@ -2,6 +2,9 @@ const { prisma } = require("../prisma/client");
 const { campaignQueue } = require("../jobs/campaign.queue");
 const { validateCSV } = require("../services/csvValidator.service");
 const { searchBusinesses } = require("../services/googleMaps.service");
+const { generateAndDeploySite } = require("../services/siteGenerator.service");
+const { sendSingleSMS } = require("../services/telnyx.service");
+const { normalizePhone } = require("../services/googleMaps.service");
 
 // --- CSV-only validation endpoint ---
 async function validateCSVRaw(req, res, next) {
@@ -226,6 +229,39 @@ async function deleteCampaign(req, res, next) {
   }
 }
 
+// --- Quick test: generate site + send one SMS without creating a campaign ---
+async function quickTest(req, res, next) {
+  try {
+    const { businessName, city, phone, outreachBody } = req.body || {};
+    if (!businessName || !city || !phone) {
+      return res.status(400).json({ error: "businessName, city, and phone are required" });
+    }
+
+    // Step 1: Generate + deploy site
+    const { siteUrl } = await generateAndDeploySite({
+      businessName,
+      city,
+      phone,
+      template: "barber",
+    });
+
+    // Step 2: Send test SMS
+    const from = normalizePhone(process.env.DEFAULT_FROM_NUMBER || process.env.TELNYX_PHONE_NUMBER);
+    const to = normalizePhone(phone);
+    const body = outreachBody
+      ? String(outreachBody)
+          .replace(/\{SITE_URL\}/g, siteUrl)
+          .replace(/\{BUSINESS_NAME\}/g, businessName)
+      : `Hi ${businessName}, check out your site: ${siteUrl}`;
+
+    await sendSingleSMS({ to, from, text: body });
+
+    return res.json({ success: true, siteUrl, phone: to });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   validateCSVRaw,
   createCampaignWizard,
@@ -233,4 +269,5 @@ module.exports = {
   getCampaign,
   getCampaignLeads,
   deleteCampaign,
+  quickTest,
 };

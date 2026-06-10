@@ -11,8 +11,8 @@ const { telnyxWebhookRouter } = require("./src/webhooks/telnyx.webhook");
 const { initSocket } = require("./src/socket");
 const { prisma } = require("./src/prisma/client");
 
-// Require worker to run inside the same process
-require("./src/jobs/bulkSms.worker");
+// Campaign worker: generates landing pages + sends outreach SMS
+require("./src/jobs/campaign.worker");
 
 const PORT = parseInt(process.env.PORT || "4000", 10);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";

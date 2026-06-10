@@ -1,0 +1,57 @@
+﻿Γùç injected env (12) from .env // tip: Γîü auth for agents [www.vestauth.com]
+======================================================================
+SMSBulk ΓÇö Site Generator E2E Test
+======================================================================
+
+[1] Config check
+  CLOUDFLARE_ACCOUNT_ID : b54f65c6943dc9caa73a9e0815150063
+  CLOUDFLARE_API_TOKEN : ***e335a7
+  CLOUDFLARE_PROJECT_NAME: sms-bulk-pages
+
+[2] Testing generateHTMLLocally (no deploy)
+  Placeholder BUSINESS_NAME replaced : true
+  Placeholder CITY replaced           : true
+  Any placeholders still present      : false
+
+  Hero section snippet:
+  <h1 class="hero-title hero-anim-1"><span class="slot-badge" title="BUSINESS_NAME" style="font-size: 20px;">Squire's Grooming Lounge</span><br/>The Spires Grooming Lounge</h1>           <div class="div
+
+[3] Generating and deploying to Cloudflare Pages...
+  Business : Squire's Grooming Lounge
+  City     : Austin
+  Project  : sms-bulk-pages
+  Output   : (waiting for Wrangler...)
+
+
+======================================================================
+[OK] Deployment SUCCEEDED after 20.2 s
+======================================================================
+
+  fileName : squires-grooming-lounge-austin.html
+  siteUrl  : https://bf5c2e16.sms-bulk-pages.pages.dev/squires-grooming-lounge-austin.html
+
+[4] Verifying live deployment...
+  HTTP Status  : 200
+  Content-Type : text/html; charset=utf-8
+  Content-Length: 119649 bytes
+
+[5] Content verification on live site
+  BUSINESS_NAME present  : true Γ£à
+  CITY present           : true Γ£à
+  Placeholders remaining : Γ¥î NO (good)
+
+  *** ALL CHECKS PASSED ***
+  The deployed page correctly shows:
+    - Business name: "Squire's Grooming Lounge"
+    - City: "Austin"
+
+  Live hero snippet:
+  <h1 class="hero-title hero-anim-1"><span class="slot-badge" title="BUSINESS_NAME" style="font-size: 20px;">Squire's Grooming Lounge</span><br/>The Spires Grooming Lounge</h1>           <div class="div
+
+[6] Cleanup check
+  temp-deploy dir was already cleaned up Γ£à
+
+======================================================================
+Test complete.
+Deployed URL: https://bf5c2e16.sms-bulk-pages.pages.dev/squires-grooming-lounge-austin.html
+======================================================================

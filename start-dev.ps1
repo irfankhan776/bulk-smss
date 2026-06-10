@@ -24,13 +24,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "`n[4/5] Generating Prisma client..." -ForegroundColor Cyan
 npx prisma generate --schema src/prisma/schema.prisma
 
-Write-Host "`n[5/5] Starting Backend + Worker + Frontend..." -ForegroundColor Cyan
+Write-Host "`n[5/5] Starting Backend + Frontend..." -ForegroundColor Cyan
 
-# Backend
+# Backend (workers run inside the server process)
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$root\backend'; npm run dev" -WindowStyle Normal
-
-# Worker
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$root\backend'; node src/jobs/bulkSms.worker.js" -WindowStyle Normal
 
 # Frontend
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$root\frontend'; npm run dev" -WindowStyle Normal

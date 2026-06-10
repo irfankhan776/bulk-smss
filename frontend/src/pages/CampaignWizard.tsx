@@ -6,10 +6,10 @@ import CsvUploader from "../components/CsvUploader";
 import CampaignProgressFeed from "../components/CampaignProgressFeed";
 
 const STEPS = [
-  { n: 1, label: "Niche & Template" },
-  { n: 2, label: "Lead Source" },
-  { n: 3, label: "Outreach Message" },
-  { n: 4, label: "Review & Launch" },
+  { n: 1, label: "Campaign Setup" },
+  { n: 2, label: "Upload CSV" },
+  { n: 3, label: "Message Composer" },
+  { n: 4, label: "Launch" },
 ];
 
 const NICHE_OPTIONS = [{ value: "barber", label: "Barber" }];
@@ -28,28 +28,28 @@ export default function CampaignWizard() {
     launch,
   } = useCampaignWizard();
 
-  // Local state for Google Maps fields (synced to step2)
-  const [gmCity, setGmCity] = useState("");
-  const [gmApiKey, setGmApiKey] = useState("");
-  const [csvRaw, setCsvRaw] = useState("");
+  const [csvRaw, setCsvRaw] = useState(step2.mode === "csv_upload" ? (step2 as any).csvRaw || "" : "");
 
-  const isCsvMode = step2.mode === "csv_upload";
-  const [csvResult, setCsvResult] = useState<{
+  const csvResult = (step2.mode === "csv_upload" ? (step2 as any).csvResult : null) as {
     valid: boolean;
     errors: string[];
     rowCount: number;
     preview: Record<string, string>[];
-  } | null>(null);
+  } | null;
 
   function handleCsvChange(raw: string) {
     setCsvRaw(raw);
     setStep2({ mode: "csv_upload", csvRaw: raw });
-    setCsvResult(null);
   }
 
   async function handleCsvValidate(raw: string) {
     const result = await validateCSV(raw);
-    setCsvResult(result as typeof csvResult);
+    // Store the result in step2 for the summary
+    setStep2({
+      mode: "csv_upload",
+      csvRaw: raw,
+      csvResult: result as any,
+    });
     return result;
   }
 
@@ -58,11 +58,7 @@ export default function CampaignWizard() {
       return !!(step1.name.trim() && step1.maxLeads > 0);
     }
     if (step === 2) {
-      if (step2.mode === "csv_upload") {
-        return csvResult?.valid === true;
-      } else {
-        return !!(gmCity.trim() && gmApiKey.trim());
-      }
+      return csvResult?.valid === true;
     }
     if (step === 3) {
       return !!(
@@ -74,9 +70,6 @@ export default function CampaignWizard() {
   }
 
   function handleNext() {
-    if (step === 2 && step2.mode === "google_maps") {
-      setStep2({ mode: "google_maps", googleCity: gmCity, googleApiKey: gmApiKey });
-    }
     if (step < 4) setStep((s) => (s + 1) as 1 | 2 | 3 | 4);
   }
 
@@ -85,12 +78,12 @@ export default function CampaignWizard() {
   }
 
   async function handleLaunch() {
-    // Ensure Google Maps fields are synced before launch
-    if (step2.mode === "google_maps") {
-      setStep2({ mode: "google_maps", googleCity: gmCity, googleApiKey: gmApiKey });
-    }
     await launch();
   }
+
+  const messagePreview = step3.outreachBody
+    .replace(/\{BUSINESS_NAME\}/g, "Squire's Grooming Lounge")
+    .replace(/\{SITE_URL\}/g, "https://sms-bulk-pages.pages.dev/squires-grooming-lounge-austin");
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -104,7 +97,7 @@ export default function CampaignWizard() {
         </button>
         <h1 className="text-2xl font-bold text-slate-100">New Campaign</h1>
         <p className="text-sm text-slate-400 mt-1">
-          Generate a site for each business, then send a personalized SMS with the link.
+          Upload a CSV of leads → generate a personalized landing page for each → send an SMS with the link.
         </p>
       </div>
 
@@ -135,7 +128,7 @@ export default function CampaignWizard() {
       {/* Step content */}
       <div className="bg-slate-950 ring-1 ring-slate-800 rounded-2xl p-6">
 
-        {/* ── STEP 1: Niche & Template ── */}
+        {/* ── STEP 1: Campaign Setup ── */}
         {step === 1 && (
           <div className="space-y-5">
             <div>
@@ -201,80 +194,23 @@ export default function CampaignWizard() {
           </div>
         )}
 
-        {/* ── STEP 2: Lead Source ── */}
+        {/* ── STEP 2: Upload CSV ── */}
         {step === 2 && (
-          <div className="space-y-5">
-            {/* Source toggle */}
-            <div className="flex rounded-lg bg-slate-900/50 ring-1 ring-slate-800 p-1 gap-1">
-              {(["csv_upload", "google_maps"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    setStep2({ mode });
-                    setCsvResult(null);
-                  }}
-                  className={clsx(
-                    "flex-1 py-2 rounded-md text-sm font-medium transition-colors",
-                    step2.mode === mode
-                      ? "bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/30"
-                      : "text-slate-400 hover:text-slate-200"
-                  )}
-                >
-                  {mode === "csv_upload" ? "📄 Upload CSV" : "🗺️ Google Maps"}
-                </button>
-              ))}
+          <div className="space-y-4">
+            <div className="rounded-lg bg-slate-900/30 ring-1 ring-slate-800 px-4 py-3 text-xs text-slate-400">
+              CSV must contain columns: <span className="font-mono text-accent-400">business_name</span>,{" "}
+              <span className="font-mono text-accent-400">phone</span>, and{" "}
+              <span className="font-mono text-accent-400">city</span>. Headers are case-insensitive.
             </div>
-
-            {/* CSV Upload */}
-            {isCsvMode && (
-              <CsvUploader
-                csvRaw={csvRaw}
-                onChange={handleCsvChange}
-                onValidate={handleCsvValidate}
-              />
-            )}
-
-            {/* Google Maps */}
-            {!isCsvMode && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    City
-                  </label>
-                  <input
-                    value={gmCity}
-                    onChange={(e) => setGmCity(e.target.value)}
-                    placeholder="e.g. Austin, TX"
-                    className="w-full rounded-md bg-slate-900/60 ring-1 ring-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-accent-500/50"
-                  />
-                  <div className="text-xs text-slate-500 mt-1">
-                    Searches for businesses without a website in this city.
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Google Maps API Key
-                  </label>
-                  <input
-                    type="password"
-                    value={gmApiKey}
-                    onChange={(e) => setGmApiKey(e.target.value)}
-                    placeholder="AIza..."
-                    className="w-full rounded-md bg-slate-900/60 ring-1 ring-slate-800 px-3 py-2.5 text-sm text-slate-100 font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-accent-500/50"
-                  />
-                  <div className="text-xs text-slate-500 mt-1">
-                    Enable{" "}
-                    <span className="font-mono text-slate-400">Places API</span>{" "}
-                    in your Google Cloud console. API key is not stored.
-                  </div>
-                </div>
-              </div>
-            )}
+            <CsvUploader
+              csvRaw={csvRaw}
+              onChange={handleCsvChange}
+              onValidate={handleCsvValidate}
+            />
           </div>
         )}
 
-        {/* ── STEP 3: Outreach Message ── */}
+        {/* ── STEP 3: Message Composer ── */}
         {step === 3 && (
           <div className="space-y-5">
             <div>
@@ -288,9 +224,13 @@ export default function CampaignWizard() {
                 className="w-full rounded-md bg-slate-900/60 ring-1 ring-slate-800 px-3 py-2.5 text-sm text-slate-100 font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-accent-500/50 resize-none"
                 placeholder="Hi {BUSINESS_NAME}, check out your site: {SITE_URL}"
               />
-              <div className="text-xs text-slate-500 mt-1">
-                Use <span className="font-mono text-accent-400">{"{BUSINESS_NAME}"}</span> for the business name and{" "}
-                <span className="font-mono text-accent-400">{"{SITE_URL}"}</span> for the generated site link.
+              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                <span>
+                  <span className="font-mono text-accent-400">{"{BUSINESS_NAME}"}</span> — business name
+                </span>
+                <span>
+                  <span className="font-mono text-accent-400">{"{SITE_URL}"}</span> — generated landing page
+                </span>
               </div>
             </div>
 
@@ -311,15 +251,29 @@ export default function CampaignWizard() {
               </div>
             </div>
 
-            {/* Live preview */}
+            {/* Message preview */}
             <div className="rounded-xl bg-slate-900/30 ring-1 ring-slate-800 p-4">
               <div className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wide">
                 Message Preview
               </div>
               <div className="text-sm text-slate-200 font-mono whitespace-pre-wrap">
-                {step3.outreachBody
-                  .replace(/\{BUSINESS_NAME\}/g, "Squire's Grooming Lounge")
-                  .replace(/\{SITE_URL\}/g, "https://sms-bulk-pages.pages.dev/squires-grooming-lounge-austin")}
+                {messagePreview || <span className="text-slate-600 italic">Write a message above to see the preview…</span>}
+              </div>
+            </div>
+
+            {/* Landing page mock preview */}
+            <div className="rounded-xl bg-slate-900/30 ring-1 ring-slate-800 overflow-hidden">
+              <div className="px-4 py-2 border-b border-slate-800 text-xs text-slate-500 font-semibold uppercase tracking-wide">
+                Landing Page Preview
+              </div>
+              <div className="p-4">
+                <div className="bg-slate-900 rounded-lg p-3 text-xs font-mono space-y-1">
+                  <div className="text-accent-400 font-bold text-sm">Squire's Grooming Lounge</div>
+                  <div className="text-slate-400">PREMIUM BARBERSHOP · AUSTIN, TX</div>
+                  <div className="mt-2 text-slate-300">Expert cuts, clean fades, and old-school service.</div>
+                  <div className="mt-2 text-accent-400/70">📞 +14374647338</div>
+                  <div className="mt-1 text-slate-500 italic">The landing page template will fill in the business name, city, and phone from your CSV.</div>
+                </div>
               </div>
             </div>
 
@@ -332,7 +286,7 @@ export default function CampaignWizard() {
           </div>
         )}
 
-        {/* ── STEP 4: Review & Launch ── */}
+        {/* ── STEP 4: Launch ── */}
         {step === 4 && campaignId ? (
           <div className="space-y-5">
             <div>
@@ -375,9 +329,7 @@ export default function CampaignWizard() {
                 <SummaryRow label="Max Leads" value={String(step1.maxLeads)} />
                 <SummaryRow
                   label="Source"
-                  value={step2.mode === "csv_upload"
-                    ? `CSV Upload (${csvResult?.rowCount ?? 0} leads)`
-                    : `Google Maps — ${(step2 as { googleCity?: string }).googleCity || gmCity}`}
+                  value={`CSV Upload (${csvResult?.rowCount ?? 0} leads)`}
                 />
                 <SummaryRow label="Delay" value={`${step3.delaySeconds}s between each SMS`} />
               </div>
@@ -386,9 +338,7 @@ export default function CampaignWizard() {
               <div className="rounded-xl bg-slate-900/30 ring-1 ring-slate-800 p-4 mb-5">
                 <div className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wide">Outreach Message</div>
                 <div className="text-sm text-slate-200 font-mono whitespace-pre-wrap">
-                  {step3.outreachBody
-                    .replace(/\{BUSINESS_NAME\}/g, "Squire's Grooming Lounge")
-                    .replace(/\{SITE_URL\}/g, "https://your-site.pages.dev/...")}
+                  {messagePreview}
                 </div>
               </div>
 
@@ -422,7 +372,7 @@ export default function CampaignWizard() {
               {step === 1 ? "Cancel" : "← Back"}
             </button>
             <button
-              onClick={step === 3 ? () => { if (step2.mode === "google_maps") setStep2({ mode: "google_maps", googleCity: gmCity, googleApiKey: gmApiKey }); handleNext(); } : handleNext}
+              onClick={handleNext}
               disabled={!canAdvance()}
               className="px-6 py-2 rounded-md text-sm font-medium bg-accent-500/15 ring-1 ring-accent-500/30 text-accent-400 hover:bg-accent-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >

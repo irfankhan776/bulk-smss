@@ -37,25 +37,6 @@ services:
     ports:
       - "4000:4000"
 
-  # Campaign worker — separate process for sequential lead processing
-  worker:
-    build:
-      context: ./worker
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sms_platform?schema=public
-      REDIS_URL: redis://redis:6379
-      TELNYX_API_KEY: ${TELNYX_API_KEY:-}
-      TELNYX_PUBLIC_KEY: ${TELNYX_PUBLIC_KEY:-}
-      TELNYX_WEBHOOK_SECRET: ${TELNYX_WEBHOOK_SECRET:-}
-      TELNYX_PHONE_NUMBER: ${TELNYX_PHONE_NUMBER:-}
-      DEFAULT_FROM_NUMBER: ${DEFAULT_FROM_NUMBER:-}
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
-      CLOUDFLARE_PROJECT_NAME: ${CLOUDFLARE_PROJECT_NAME:-sms-bulk-pages}
-    depends_on:
-      - postgres
-      - redis
-
   frontend:
     build:
       context: ./frontend

@@ -78,7 +78,7 @@ async function processLead(job) {
 
   try {
     // Step 1: Generate + deploy site
-    const { siteUrl } = await generateAndDeploySite({ businessName, city, template });
+    const { siteUrl } = await generateAndDeploySite({ businessName, city, phone, template });
     await prisma.campaignLead.update({
       where: { id: leadId },
       data: { siteUrl, status: "site_deployed" },

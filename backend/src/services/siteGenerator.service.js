@@ -29,10 +29,10 @@ function slugify(text) {
 /**
  * Generate and deploy a single-business HTML page to Cloudflare Pages.
  *
- * @param {{ businessName: string, city: string, template: string }} params
+ * @param {{ businessName: string, city: string, phone: string, template: string }} params
  * @returns {Promise<{ siteUrl: string, fileName: string }>}
  */
-async function generateAndDeploySite({ businessName, city, template = "barber" }) {
+async function generateAndDeploySite({ businessName, city, phone, template = "barber" }) {
   const templatePath = TEMPLATES[template] || TEMPLATES.barber;
 
   if (!fs.existsSync(templatePath)) {
@@ -42,9 +42,24 @@ async function generateAndDeploySite({ businessName, city, template = "barber" }
   let htmlContent = fs.readFileSync(templatePath, "utf8");
 
   // Replace placeholders
+  // Build a short name: strip common suffixes like "'s", "Barber Shop", "Barbershop", "Salon", "Grooming"
+  const shortName = businessName
+    .replace(/'?s\s*/gi, "")         // remove 's possessive
+    .replace(/\s*(barber\s*shop|barbershop|salon|grooming|grooming\s*lounge|hair\s*studio|men'?s\s*club)\s*/gi, "") // strip suffix
+    .replace(/[^a-zA-Z0-9\s]/g, "")  // remove punctuation
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)                     // take first 2 words max
+    .join(" ");
+
   const replacements = [
     { key: "BUSINESS_NAME", value: businessName },
+    { key: "BUSINESS_NAME_SHORT", value: shortName || businessName },
     { key: "CITY", value: city },
+    { key: "PHONE", value: phone },
+    { key: "PHONE_DISPLAY", value: phone },
+    { key: "PHONE_RAW", value: phone ? phone.replace(/\D/g, "") : "" },
+    { key: "INSTAGRAM_HANDLE", value: slugify(businessName) },
   ];
 
   replacements.forEach(({ key, value }) => {
@@ -120,16 +135,31 @@ async function deployToCloudflarePages(deployDir, fileName) {
 /**
  * Generate HTML locally (without deploying) — useful for preview.
  */
-function generateHTMLLocally({ businessName, city, template = "barber" }) {
+function generateHTMLLocally({ businessName, city, phone, template = "barber" }) {
   const templatePath = TEMPLATES[template] || TEMPLATES.barber;
   if (!fs.existsSync(templatePath)) {
     throw new Error(`Template not found: ${templatePath}`);
   }
   let htmlContent = fs.readFileSync(templatePath, "utf8");
 
+  // Build a short name: strip common suffixes like "'s", "Barber Shop", "Barbershop", "Salon", "Grooming"
+  const shortName = businessName
+    .replace(/'?s\s*/gi, "")         // remove 's possessive
+    .replace(/\s*(barber\s*shop|barbershop|salon|grooming|grooming\s*lounge|hair\s*studio|men'?s\s*club)\s*/gi, "") // strip suffix
+    .replace(/[^a-zA-Z0-9\s]/g, "")  // remove punctuation
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)                     // take first 2 words max
+    .join(" ");
+
   const replacements = [
     { key: "BUSINESS_NAME", value: businessName },
+    { key: "BUSINESS_NAME_SHORT", value: shortName || businessName },
     { key: "CITY", value: city },
+    { key: "PHONE", value: phone },
+    { key: "PHONE_DISPLAY", value: phone },
+    { key: "PHONE_RAW", value: phone ? phone.replace(/\D/g, "") : "" },
+    { key: "INSTAGRAM_HANDLE", value: slugify(businessName) },
   ];
 
   replacements.forEach(({ key, value }) => {
